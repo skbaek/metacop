@@ -1,8 +1,12 @@
-:- op(1140, xfy, <=>). 
-:- op(1130, xfy, =>). 
-:- op(500, fy, all). 
-:- op(500, fy, ex).
-:- op(500, xfy, :).
+#!/usr/bin/env swipl
+
+:- initialization(main, main).
+
+% :- op(1140, xfy, <=>). 
+% :- op(1130, xfy, =>). 
+% :- op(500, fy, all). 
+% :- op(500, fy, ex).
+% :- op(500, xfy, :).
 
 test0("( -. ph \\/ ph )").  
 test1("( ( ( -. ph /\\ -. ps ) \\/ ph ) \\/ ps )"). 
@@ -10,73 +14,87 @@ test2("( -. ( ( ph \\/ ps ) \\/ ch ) \\/ ( ( ph \\/ ch ) \\/ ps ) )").
 
 parse_lp(["(" | Rem], Rem). 
 parse_rp([")" | Rem], Rem). 
-parse_and(["/\\" | Rem], Rem). 
-parse_or(["\\/" | Rem], Rem). 
-parse_not(["-." | Rem], Rem). 
-parse_to(["->" | Rem], Rem). 
-parse_iff(["<->" | Rem], Rem). 
+
+parse_conn(["\\/" | Tks], Fml1, Fml2, or(Fml1, Fml2),  Tks). 
+parse_conn(["/\\" | Tks], Fml1, Fml2, and(Fml1, Fml2), Tks). 
+parse_conn(["->" | Tks],  Fml1, Fml2, to(Fml1, Fml2),  Tks). 
+parse_conn(["<->" | Tks], Fml1, Fml2, iff(Fml1, Fml2), Tks). 
 
 parse_neg(["-." | Tks], -Fml, Rem) :- 
   parse_fml(Tks, Fml, Rem). 
 
-parse_disj(Tks, or(Fml1, Fml2), Rem) :- 
+parse_bin(Tks, Fml, Rem) :- 
   parse_lp(Tks, Tks0), 
   parse_fml(Tks0, Fml1, Tks1), 
-  parse_or(Tks1, Tks2),
-  parse_fml(Tks2, Fml2, Tks3),
-  parse_rp(Tks3, Rem). 
-
-parse_conj(Tks, and(Fml1, Fml2), Rem) :- 
-  parse_lp(Tks, Tks0), 
-  parse_fml(Tks0, Fml1, Tks1), 
-  parse_and(Tks1, Tks2),
-  parse_fml(Tks2, Fml2, Tks3),
-  parse_rp(Tks3, Rem). 
-
-parse_disj(Tks, or(Fml1, Fml2), Rem) :- 
-  parse_lp(Tks, Tks0), 
-  parse_fml(Tks0, Fml1, Tks1), 
-  parse_or(Tks1, Tks2),
+  parse_conn(Tks1, Fml1, Fml2, Fml, Tks2),
   parse_fml(Tks2, Fml2, Tks3),
   parse_rp(Tks3, Rem). 
 
 parse_atm([Atm | Rem], Atm, Rem) :-
-  parse_neg(Tks, Lit, Rem) ; 
-  ( Tks = [Atm | Rem], Lit = pos(Atm) ).
+  member(Atm, ["ph", "ps", "ch", "th", "ta", "et", "ze", "si", "rh", "mu", "la", "ka"]).
 
 parse_fml(Tks, Fml, Rem) :- 
-  parse_disj(Tks, Fml, Rem) ;
-  parse_conj(Tks, Fml, Rem) ;
-  parse_lit(Tks, Fml, Rem).
+  parse_bin(Tks, Fml, Rem) ;
+  parse_neg(Tks, Fml, Rem) ;
+  parse_atm(Tks, Fml, Rem).
 
 parse(Str, Fml) :- 
-  split_string(Str,  " ", "", Tks),
+  split_string(Str, " ", "", Tks),
   parse_fml(Tks, Fml, []).
 
-negate(pos(Atm), neg(Atm)). 
-negate(neg(Atm), pos(Atm)). 
+conjugate(Lit, CnjLit) :- 
+  Lit = -Atm -> 
+  CnjLit = Atm ;
+  CnjLit = -Lit.
 
-complements(neg(Atm), pos(Atm)).
-complements(pos(Atm), neg(Atm)).
+% complements(neg(Atm), pos(Atm)).
+% complements(pos(Atm), neg(Atm)).
 
-has_complement(Pth, or(Frm1, Frm2)) :-  
-  has_complement(Pth, Frm1) ;
-  has_complement(Pth, Frm2).
+% normalize(or(Frm1, Frm2), or(Nrm1, Nrm2)) :-  
+%   normalize(Frm1, Nrm1), normalize(Frm2, Nrm2). 
+% normalize(and(Frm1, Frm2), and(Nrm1, Nrm2)) :-  
+%   normalize(Frm1, Nrm1), normalize(Frm2, Nrm2). 
+% normalize(to(Frm1, Frm2), or(Nrm1, Nrm2)) :-  
+%   normalize(-Frm1, Nrm1), normalize(Frm2, Nrm2). 
+% normalize(iff(Frm1, Frm2), and(Nrm1, Nrm2)) :-  
+%   normalize(to(Frm1, Frm2), Nrm1), 
+%   normalize(to(Frm2, Frm1), Nrm2). 
+% normalize(-or(Frm1, Frm2), and(Nrm1, Nrm2)) :-  
+%   normalize(-Frm1, Nrm1), normalize(-Frm2, Nrm2). 
+% normalize(-and(Frm1, Frm2), or(Nrm1, Nrm2)) :-  
+%   normalize(-Frm1, Nrm1), normalize(-Frm2, Nrm2). 
+% normalize(-to(Frm1, Frm2), and(Nrm1, Nrm2)) :-  
+%   normalize(Frm1, Nrm1), normalize(-Frm2, Nrm2). 
+% normalize(-iff(Frm1, Frm2), Nrm) :-  
+%   normalize(iff(Frm1, -Frm2), Nrm). 
+% normalize(--Frm, Nrm) :- normalize(Frm, Nrm).
+% normalize(-Frm, -Frm).
 
-has_complement(Pth, and(Frm1, Frm2)) :-  
-  has_complement(Pth, Frm1) ;
-  has_complement(Pth, Frm2).
+conjuncts(and(Frm1, Frm2), Frm1, Frm2). 
+conjuncts(-or(Frm1, Frm2), -Frm1, -Frm2). 
+conjuncts(-to(Frm1, Frm2), Frm1, -Frm2). 
+conjuncts(iff(Frm1, Frm2), to(Frm1, Frm2), to(Frm2, Frm1)). 
 
-has_complement(Pth, Lit) :- 
-  negate(Lit, NegLit),
-  member(NegLit, Pth).
+disjuncts(or(Frm1, Frm2), Frm1, Frm2). 
+disjuncts(to(Frm1, Frm2), -Frm1, Frm2). 
+disjuncts(-and(Frm1, Frm2), -Frm1, -Frm2). 
+disjuncts(-iff(Frm1, Frm2), and(Frm1, -Frm2), and(Frm2, -Frm1)). 
+
+juncts(Frm, Frm1, Frm2) :- 
+  conjuncts(Frm, Frm1, Frm2) ;
+  disjuncts(Frm, Frm1, Frm2).
+
+complementary(Pth, Frm) :-  
+  juncts(Frm, Frm1, Frm2) ->
+  ( complementary(Pth, Frm1) ; complementary(Pth, Frm2) ) ;
+  ( conjugate(Frm, CnjFrm), member(CnjFrm, Pth) ).
 
 compute_mode(Pth, Frm1, Frm2, Md, Md1, Md2) :- 
   ( Md = start, Md1 = start, Md2 = start ) ;
   ( Md = span, Md1 = span, Md2 = span ) ;
   ( Md = ext,
-    ( ( has_complement(Pth, Frm1), Md1 = ext, Md2 = span ) ; 
-      ( has_complement(Pth, Frm2), Md1 = ext, Md2 = span ) ) ).
+    ( ( complementary(Pth, Frm1), Md1 = ext, Md2 = span ) ; 
+      ( complementary(Pth, Frm2), Md1 = ext, Md2 = span ) ) ).
 
 prove(Frm, Prf) :- 
   iterate(Frm, 2, Trc),
@@ -91,15 +109,16 @@ iterate(Frm, Lth, Prf) :-
 fold([Dj], Dj). 
 fold([Dj | Djs], or(Dj, Frm)) :- fold(Djs, Frm). 
 
-search(Pth, or(Frm1, Frm2), Dsj, Lth, Md, [Inf | Trc]) :- 
-  ( ( search(Pth, Frm1, [Frm2 | Dsj], Lth, Md, Trc), Inf = lft) ;
-    ( search(Pth, Frm2, [Frm1 | Dsj], Lth, Md, Trc), Inf = rgt) ).
+search(Pth, Frm, Dsj, Lth, Md, Trc) :- 
+  disjuncts(Frm, Frm1, Frm2),
+  ( ( search(Pth, Frm1, [Frm2 | Dsj], Lth, Md, Trc0), Trc = lft(Trc0) ) ;
+    ( search(Pth, Frm2, [Frm1 | Dsj], Lth, Md, Trc0), Trc = rgt(Trc0) ) ).
 
-search(Pth, and(Frm1, Frm2), Dsj, Lth, Md, Trc) :- 
+search(Pth, Frm, Dsj, Lth, Md, split(Trc0, Trc1)) :- 
+  conjuncts(Frm, Frm1, Frm2)
   compute_mode(Pth, Frm1, Frm2, Md, Md1, Md2),
-  search(Pth, Frm1, Dsj, Lth, Md1, Trc1), 
-  search(Pth, Frm2, Dsj, Lth, Md2, Trc2),
-  append(Trc1, Trc2, Trc). 
+  search(Pth, Frm1, Dsj, Lth, Md1, Trc0), 
+  search(Pth, Frm2, Dsj, Lth, Md2, Trc1).
 
 search([], pos(Atm), Djs, Lth, start, [psh | Trc]) :- 
   Lth \== 0, NewLth is Lth - 1, 
@@ -148,5 +167,7 @@ compile(or(Pth, _), Lit, Djs, [red | Trc], Rem, Prf) :-
   compile(Pth, Lit, Djs, [red | Trc], Rem, Prf0),
   string_concat(Prf0, " ? ? ? coptl", Prf).
 
-
-
+main([Argv | _]) :-
+  atom_string(Argv, Str),
+  parse(Str, Fml),
+  print(Fml).
